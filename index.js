@@ -618,59 +618,60 @@ SPT(text) {
 }
 
 (async () => {
-    let users = require("./setup/starter");
-
-    if (!Array.isArray(users)) {
-        console.warn("Warning: 'users' is not an array. Wrapping it into an array.");
-        users = [users];
-    }
-
-    const info = {
-        name: "STREAMING",
-        version: "2.1.6aaa | deobf version",
-        update: "18:10 10/8/2024",
-        wait: Date.now() + 1000 * users.length
-    };
-
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    console.clear();
-    console.log("[+] STREAMING : 2.1.4ccc - 18:10 10/8/2024 | deobf version".blue);
-    console.log(`[+] TOKENS : ERROR still working btw just lazy to add`.blue);
-    console.log(`[+] ✨ | Premium user | SUPPORT?? | nyaa!! `.blue);
-    console.log(`[+] Deobf ก็ยากอยู่นะ | ใช้เวลาไป 1 ชั่วโมง 50 นาที 😭`.green);
-    console.log(" ↓ ".white);
-
-    const work = new Map();
-
-    const envToken = process.env.TOKEN;
-
-    if (envToken) {
-        console.log("[+] Using token from process.env.TOKEN".yellow);
-        const client = new ModClient(envToken, users[0].config, info);
-        const result = await client.start();
-        if (result.success) {
-            work.set(`ID:${client.user.id}`, client);
+    try {
+        // Load environment variables
+        require('dotenv').config();
+        
+        let users = require("./setup/starter");
+        if (!Array.isArray(users)) {
+            console.warn("Warning: 'users' is not an array. Wrapping it into an array.".yellow);
+            users = [users];
         }
-    } else {
-        for (const user of users) {
-            for (const token of user.tk) {
-                const client = new ModClient(token, user.config, info);
+
+        const info = {
+            name: "STREAMING",
+            version: "2.1.6aaa | deobf version",
+            update: "18:10 10/8/2024",
+            wait: Date.now() + 1000 * users.length,
+        };
+
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        console.clear();
+        console.log("[+] STREAMING : 2.1.4ccc - 18:10 10/8/2024 | deobf version".blue);
+        console.log(`[+] TOKENS : Loaded from .env file`.blue);
+        console.log(`[+] ✨ | Premium user | SUPPORT?? | nyaa!! `.blue);
+        console.log(`[+] Deobf ก็ยากอยู่นะ | ใช้เวลาไป 1 ชั่วโมง 50 นาที 😭`.green);
+        console.log(" ↓ ".white);
+
+        const work = new Map();
+        const envToken = process.env.TOKEN;
+
+        if (envToken) {
+            console.log("[+] Using token from .env file".yellow);
+            try {
+                const client = new ModClient(envToken, users[0].config, info);
                 const result = await client.start();
                 if (result.success) {
                     work.set(`ID:${client.user.id}`, client);
+                    console.log(`[+] Successfully connected with token from .env`.green);
                 }
+            } catch (error) {
+                console.log(`[-] Error with .env token: ${error.message}`.red);
             }
+        } else {
+            console.log(`[-] No token found in .env file`.red);
         }
-    }
 
-    console.log(" ↑ ".white);
-    const totalTokens = users.reduce((count, user) => count + user.tk.length, 0);
-    console.log(`[+] DEOBF BY 4levy : ${work.size}/${totalTokens}`.magenta);
+        console.log(" ↑ ".white);
+        console.log(`[+] DEOBF BY 4levy : ${work.size}/1`.magenta);
 
-    if (!work.size) {
-        console.log('');
-        console.log("[-] CLOSING. . . ".red);
-        setTimeout(() => process.exit(), 3000);
+        if (!work.size) {
+            console.log("");
+            console.log("[-] CLOSING. . . ".red);
+            setTimeout(() => process.exit(), 3000);
+        }
+    } catch (error) {
+        console.error(`[-] Fatal error: ${error.message}`.red);
+        process.exit(1);
     }
 })();
