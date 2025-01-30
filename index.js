@@ -7,16 +7,21 @@ const os = require("os");
 require("colors");
 const express = require("express");
 
-const app = express();
-const port = 3000;
+const startServer = () => {
+    const app = express();
+    const port = process.env.PORT || 3000;
+    const startTime = Date.now();
 
-app.get("/", (req, res) => {
-    res.send("Hello World!");
-  });
-  
-  app.listen(port, () => {
-    console.log(`🔗 Listening to port : http://localhost:${port}`);
-  });
+    app.get('/', (req, res) => {
+        res.sendFile(__dirname + '/index.html');
+    });
+
+    app.get('/api/starttime', (req, res) => {
+        res.json({ startTime });
+    });
+
+    app.listen(port, () => console.log(`🔗 Listening to port : http://localhost:${port}\n`));
+};
 
 class GetImage {
     constructor(client) {
@@ -369,14 +374,14 @@ class ModClient extends Client {
     async streaming() {
         const { setup, config } = this.config;
         const applicationId = config.options?.botid || "1109522937989562409";
-        
+
         let watchUrl = config.options["watch-url"]?.[this.index.url];
-        
+
         if (!watchUrl || !this.getExternal.isValidURL(watchUrl)) {
             console.warn("No valid streaming URL found. Skipping URL setting.");
             return;
         }
-    
+
         let platform = '';
         if (watchUrl.includes("twitch.tv")) {
             platform = 'Twitch';
@@ -384,28 +389,28 @@ class ModClient extends Client {
             platform = 'YouTube';
         } else {
             platform = 'Unknown';
-        }    
-    
+        }
+
         const presence = new RichPresence(this)
             .setApplicationId(applicationId)
             .setType("STREAMING")
             .setURL(watchUrl)
-            .setName(platform); 
-    
+            .setName(platform);
+
         const text1 = config["text-1"]?.[this.index.text_1] || null;
         presence.setDetails(this.SPT(text1));
-    
+
         const text2 = config["text-2"]?.[this.index.text_2] || null;
         presence.setState(this.SPT(text2));
-    
+
         const text3 = config["text-3"]?.[this.index.text_3] || null;
         presence.setAssetsLargeText(this.SPT(text3));
-    
+
         if (config["text-4"]?.length) {
             const text4 = config["text-4"][this.index.text_4];
             presence.setAssetsSmallText(this.SPT(text4));
         }
-    
+
         if (config.bigimg?.length || config.smallimg?.length) {
             const bigImg = config.bigimg[this.index.bm];
             const smallImg = config.smallimg[this.index.sm];
@@ -413,28 +418,28 @@ class ModClient extends Client {
             presence.setAssetsLargeImage(images.bigImage);
             presence.setAssetsSmallImage(images.smallImage);
         }
-    
+
         if (config["button-1"]?.length) {
             const button1 = config["button-1"][this.index.bt_1];
             presence.addButton(this.SPT(button1.name), button1.url);
         }
-    
+
         if (config["button-2"]?.length) {
             const button2 = config["button-2"][this.index.bt_2];
             presence.addButton(this.SPT(button2.name), button2.url);
         }
-    
+
         const status = {
             activities: [presence]
         };
-    
+
         this.user?.setPresence(status);
-    
+
         setTimeout(() => this.streaming(), setup?.delay * 1000);
-    
+
         this.lib.count++;
         this.lib.countParty++;
-    
+
         this.index.url = (this.index.url + 1) % config.options["watch-url"]?.length;
         this.index.text_0 = (this.index.text_0 + 1) % config["text-1"]?.length;
         this.index.text_1 = (this.index.text_1 + 1) % config["text-1"]?.length;
@@ -446,7 +451,7 @@ class ModClient extends Client {
         this.index.bm = (this.index.bm + 1) % config.bigimg?.length;
         this.index.sm = (this.index.sm + 1) % config.smallimg?.length;
     }
-    
+
     startInterval(callback, interval) {
         const id = setInterval(callback, interval);
         this.intervals.add(id);
@@ -499,84 +504,84 @@ class ModClient extends Client {
         });
     }
 
-SPT(text) {
-    if (!text) return text || null;
+    SPT(text) {
+        if (!text) return text || null;
 
-    const { weather, sys, emoji, textFont, lib } = this;
-    const currentMoment = moment().locale('en').tz(weather.timezone);
+        const { weather, sys, emoji, textFont, lib } = this;
+        const currentMoment = moment().locale('en').tz(weather.timezone);
 
-    const variables = {
-        'hour:1': currentMoment.format('HH'),
-        'hour:2': currentMoment.format('hh'),
-        'min:1': currentMoment.format('mm'),
-        'min:2': currentMoment.format('mm A'),
-        'th=date': currentMoment.format('DD'),
-        'th=month:1': currentMoment.format('MM'),
-        'th=year:2': currentMoment.format('YY'),
-        'en:date': currentMoment.format('dddd'),
-        'en=month:1': currentMoment.format('MMMM'),
-        'en=year:2': currentMoment.format('YYYY'),
-        'city': weather.city,
-        'region': weather.region,
-        'country': weather.country,
-        'temp:c': weather.temp_c,
-        'temp:f': weather.temp_f,
-        'wind:kph': weather.wind_kph,
-        'wind:mph': weather.wind_mph,
-        'wind:degree': weather.wind_degree,
-        'wind:dir': weather.wind_dir,
-        'pressure:mb': weather.pressure_mb,
-        'pressure:in': weather.pressure_in,
-        'precip:mm': weather.precip_mm,
-        'precip:in': weather.precip_in,
-        'gust:kph': weather.gust_kph,
-        'gust:mph': weather.gust_mph,
-        'vis:km': weather.vis_km,
-        'vis:mi': weather.vis_mi,
-        'humidity': weather.humidity,
-        'cloud': weather.cloud,
-        'uv': weather.uv,
-        'pm2.5': weather.pm2_5,
-        'ping': Math.round(this.ws.ping),
-        'patch': lib.v.patch,
-        'cpu:name': sys.cpuname,
-        'cpu:cores': sys.cpucores,
-        'cpu:speed': sys.cpuspeed,
-        'cpu:usage': sys.cpu,
-        'ram:usage': sys.ram,
-        'uptime:days': Math.trunc(this.uptime / 86400000),
-        'uptime:hours': Math.trunc(this.uptime / 3600000 % 24),
-        'uptime:minutes': Math.trunc(this.uptime / 60000 % 60),
-        'uptime:seconds': Math.trunc(this.uptime / 1000 % 60),
-        'count++': lib.count,
-        'user:name': this.user?.username,
-        'user:icon': this.user?.displayAvatarURL(),
-        'user:banner': this.user?.bannerURL(),
-        'emoji:random': emoji.random(),
-        'emoji:time': emoji.getTime(currentMoment.format('HH')),
-        'emoji:clock': emoji.getClock(currentMoment.format('HH'))
-    };
+        const variables = {
+            'hour:1': currentMoment.format('HH'),
+            'hour:2': currentMoment.format('hh'),
+            'min:1': currentMoment.format('mm'),
+            'min:2': currentMoment.format('mm A'),
+            'th=date': currentMoment.format('DD'),
+            'th=month:1': currentMoment.format('MM'),
+            'th=year:2': currentMoment.format('YY'),
+            'en:date': currentMoment.format('dddd'),
+            'en=month:1': currentMoment.format('MMMM'),
+            'en=year:2': currentMoment.format('YYYY'),
+            'city': weather.city,
+            'region': weather.region,
+            'country': weather.country,
+            'temp:c': weather.temp_c,
+            'temp:f': weather.temp_f,
+            'wind:kph': weather.wind_kph,
+            'wind:mph': weather.wind_mph,
+            'wind:degree': weather.wind_degree,
+            'wind:dir': weather.wind_dir,
+            'pressure:mb': weather.pressure_mb,
+            'pressure:in': weather.pressure_in,
+            'precip:mm': weather.precip_mm,
+            'precip:in': weather.precip_in,
+            'gust:kph': weather.gust_kph,
+            'gust:mph': weather.gust_mph,
+            'vis:km': weather.vis_km,
+            'vis:mi': weather.vis_mi,
+            'humidity': weather.humidity,
+            'cloud': weather.cloud,
+            'uv': weather.uv,
+            'pm2.5': weather.pm2_5,
+            'ping': Math.round(this.ws.ping),
+            'patch': lib.v.patch,
+            'cpu:name': sys.cpuname,
+            'cpu:cores': sys.cpucores,
+            'cpu:speed': sys.cpuspeed,
+            'cpu:usage': sys.cpu,
+            'ram:usage': sys.ram,
+            'uptime:days': Math.trunc(this.uptime / 86400000),
+            'uptime:hours': Math.trunc(this.uptime / 3600000 % 24),
+            'uptime:minutes': Math.trunc(this.uptime / 60000 % 60),
+            'uptime:seconds': Math.trunc(this.uptime / 1000 % 60),
+            'count++': lib.count,
+            'user:name': this.user?.username,
+            'user:icon': this.user?.displayAvatarURL(),
+            'user:banner': this.user?.bannerURL(),
+            'emoji:random': emoji.random(),
+            'emoji:time': emoji.getTime(currentMoment.format('HH')),
+            'emoji:clock': emoji.getClock(currentMoment.format('HH'))
+        };
 
-    const processFont = (fontNum, content) => {
-        const processedContent = content.replace(/\{([^{}]+)\}/g, (_, key) => variables[key] || key);
-        return textFont[`getFont${fontNum}`]?.(processedContent) || processedContent;
-    };
+        const processFont = (fontNum, content) => {
+            const processedContent = content.replace(/\{([^{}]+)\}/g, (_, key) => variables[key] || key);
+            return textFont[`getFont${fontNum}`]?.(processedContent) || processedContent;
+        };
 
-    const processText = (input) => {
-        return input.replace(/\{NF(\d)\((.*?)\)\}/g, (_, num, content) => {
-            return processFont(num, content);
-        }).replace(/\{([^{}]+)\}/g, (_, key) => variables[key] || key);
-    };
+        const processText = (input) => {
+            return input.replace(/\{NF(\d)\((.*?)\)\}/g, (_, num, content) => {
+                return processFont(num, content);
+            }).replace(/\{([^{}]+)\}/g, (_, key) => variables[key] || key);
+        };
 
-    let result = text;
-    let prev;
-    do {
-        prev = result;
-        result = processText(prev);
-    } while (result !== prev);
+        let result = text;
+        let prev;
+        do {
+            prev = result;
+            result = processText(prev);
+        } while (result !== prev);
 
-    return result;
-}
+        return result;
+    }
     log() {
         const guild = this.guilds.cache.get("1007520773096886323");
         const logMessages = {
@@ -620,8 +625,9 @@ SPT(text) {
 
 (async () => {
     try {
+        startServer();
         require('dotenv').config();
-        
+
         let users = require("./setup/starter");
         if (!Array.isArray(users)) {
             console.warn("Warning: 'users' is not an array. Wrapping it into an array.".yellow);
@@ -651,19 +657,19 @@ SPT(text) {
 
             for (let i = 0; i < envTokens.length; i++) {
                 const token = envTokens[i];
-                const config = users[i] || users[0]; 
+                const config = users[i] || users[0];
 
                 try {
                     const client = new ModClient(token, config.config, info);
                     const result = await client.start();
-                    
+
                     if (result.success) {
                         work.set(`ID:${client.user.id}`, client);
                         console.log(`[+] Successfully connected with token #${i + 1}`.green);
                     }
 
                     await new Promise(resolve => setTimeout(resolve, 1000));
-                    
+
                 } catch (error) {
                     console.log(`[-] Error with token #${i + 1}: ${error.message}`.red);
                 }
