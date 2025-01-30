@@ -1,4 +1,4 @@
-multi token still not supported
+multi tokens
 
 Please ```npm install``` first before running the script
 
