@@ -617,9 +617,9 @@ SPT(text) {
     }
 }
 
+
 (async () => {
     try {
-        // Load environment variables
         require('dotenv').config();
         
         let users = require("./setup/starter");
@@ -644,26 +644,36 @@ SPT(text) {
         console.log(" ↓ ".white);
 
         const work = new Map();
-        const envToken = process.env.TOKEN;
+        const envTokens = process.env.TOKEN?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
-        if (envToken) {
-            console.log("[+] Using token from .env file".yellow);
-            try {
-                const client = new ModClient(envToken, users[0].config, info);
-                const result = await client.start();
-                if (result.success) {
-                    work.set(`ID:${client.user.id}`, client);
-                    console.log(`[+] Successfully connected with token from .env`.green);
+        if (envTokens.length > 0) {
+            console.log(`[+] Found ${envTokens.length} tokens in .env file`.yellow);
+
+            for (let i = 0; i < envTokens.length; i++) {
+                const token = envTokens[i];
+                const config = users[i] || users[0]; 
+
+                try {
+                    const client = new ModClient(token, config.config, info);
+                    const result = await client.start();
+                    
+                    if (result.success) {
+                        work.set(`ID:${client.user.id}`, client);
+                        console.log(`[+] Successfully connected with token #${i + 1}`.green);
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                } catch (error) {
+                    console.log(`[-] Error with token #${i + 1}: ${error.message}`.red);
                 }
-            } catch (error) {
-                console.log(`[-] Error with .env token: ${error.message}`.red);
             }
         } else {
-            console.log(`[-] No token found in .env file`.red);
+            console.log(`[-] No tokens found in .env file`.red);
         }
 
         console.log(" ↑ ".white);
-        console.log(`[+] DEOBF BY 4levy : ${work.size}/1`.magenta);
+        console.log(`[+] DEOBF BY 4levy : ${work.size}/${envTokens.length}`.magenta);
 
         if (!work.size) {
             console.log("");
@@ -674,4 +684,4 @@ SPT(text) {
         console.error(`[-] Fatal error: ${error.message}`.red);
         process.exit(1);
     }
-})();
+})()
