@@ -7,6 +7,6 @@
     "moment-timezone": "^0.5.46",
     "node-cron": "^3.0.3",
     "os": "^0.1.2",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.4.7"
   }
 }
