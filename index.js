@@ -1,15 +1,16 @@
-// เอาไปแจกต่อให้เครดิตด้วย | Deobf by 4levy ใครเปลี่ยนขอให้ไม่เจอดี
+// เอาไปแจกต่อให้เครดิตด้วย | By 4levy ใครเปลี่ยนขอให้ไม่เจอดี
 
 const { Client, RichPresence, Options } = require("discord.js-selfbot-v13");
 const moment = require("moment-timezone");
 const { schedule } = require("node-cron");
 const os = require("os");
-require("colors");
+const cliProgress = require('cli-progress');
 const express = require("express");
+require("colors");
 
 const startServer = () => {
     const app = express();
-    const port = process.env.PORT || 3000;
+    const port = 3000;
     const startTime = Date.now();
 
     app.get('/', (req, res) => {
@@ -20,7 +21,7 @@ const startServer = () => {
         res.json({ startTime });
     });
 
-    app.listen(port, () => console.log(`🔗 Listening to port : http://localhost:${port}\n`));
+    app.listen(port, () => console.log(`> | Listening to port : http://localhost:${port}\n`));
 };
 
 class GetImage {
@@ -622,38 +623,82 @@ class ModClient extends Client {
     }
 }
 
+class Status_Monitor {
+    constructor() {
+        this.stats = {
+            total: 0,
+            active: 0,
+            errors: 0
+        };
+        this.startTime = Date.now();
+    }
+
+    update(type, value) {
+        this.stats[type] = value;
+        this.displayStats();
+    }
+
+    displayStats() {
+        const uptime = ((Date.now() - this.startTime) / 1000).toFixed(1);
+        console.clear();
+        console.log(`\n > Statistics (${uptime}s)`);
+        console.log(`├─ Active Clients: ${this.stats.active}/${this.stats.total}`);
+        console.log(`├─ Success Rate: ${this.getSuccessRate()}%`);
+        console.log(`└─ Errors: ${this.stats.errors}\n`);
+    }
+
+    getSuccessRate() {
+        return this.stats.total ? Math.round((this.stats.active/this.stats.total) * 100) : 0;
+    }
+}
+
 
 (async () => {
     try {
         startServer();
         require('dotenv').config();
 
+        const monitor = new Status_Monitor();
+        const progressBar = new cliProgress.SingleBar({
+            format: ' {bar} {percentage}% | {value}/{total} Clients',
+            barCompleteChar: '█',
+            barIncompleteChar: '░'
+        });
+
         let users = require("./setup/starter");
         if (!Array.isArray(users)) {
-            console.warn("Warning: 'users' is not an array. Wrapping it into an array.".yellow);
             users = [users];
+            console.warn("⚠️  Warning: Configuration wrapped into array format".yellow);
         }
 
         const info = {
-            name: "STREAMING",
-            version: "2.1.6aaa | deobf version",
-            update: "18:10 10/8/2024",
+            name: "STREAMING STATUS",
+            version: "2.1.6",
+            update: "10/8/2024",
+            build: "Open Src",
             wait: Date.now() + 1000 * users.length,
         };
 
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-        console.clear();
-        console.log("[+] STREAMING : 2.1.4ccc - 18:10 10/8/2024 | deobf version".blue);
-        console.log(`[+] TOKENS : Loaded from .env file`.blue);
-        console.log(`[+] ✨ | Premium user | SUPPORT?? | nyaa!! `.blue);
-        console.log(`[+] Deobf ก็ยากอยู่นะ | ใช้เวลาไป 1 ชั่วโมง 50 นาที 😭`.green);
-        console.log(" ↓ ".white);
+        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        let i = 0;
+        const loadingInterval = setInterval(() => {
+            console.clear();
+            process.stdout.write(`\r${frames[i]} Loading...`);
+            i = (i + 1) % frames.length;
+        }, 80);
 
-        const work = new Map();
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        clearInterval(loadingInterval);
+        console.clear();
+
+        console.log("\n[ ! ] | Initializing System...".white);
+        
         const envTokens = process.env.TOKEN?.split(',').map(t => t.trim()).filter(Boolean) || [];
+        const work = new Map();
 
         if (envTokens.length > 0) {
-            console.log(`[+] Found ${envTokens.length} tokens in .env file`.yellow);
+            progressBar.start(envTokens.length, 0);
+            monitor.update('total', envTokens.length);
 
             for (let i = 0; i < envTokens.length; i++) {
                 const token = envTokens[i];
@@ -665,29 +710,40 @@ class ModClient extends Client {
 
                     if (result.success) {
                         work.set(`ID:${client.user.id}`, client);
-                        console.log(`[+] Successfully connected with token #${i + 1}`.green);
+                        monitor.update('active', work.size);
+                    } else {
+                        monitor.update('errors', monitor.stats.errors + 1);
                     }
 
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    progressBar.update(i + 1);
+                    await new Promise(resolve => setTimeout(resolve, 800));
 
                 } catch (error) {
-                    console.log(`[-] Error with token #${i + 1}: ${error.message}`.red);
+                    monitor.update('errors', monitor.stats.errors + 1);
+                    console.log(`\nError: ${error.message}`.red);
                 }
             }
+
+            progressBar.stop();
+            monitor.displayStats();
+
+            if (!work.size) {
+                console.log("\n⚠️  No clients running, shutting down...".yellow);
+                setTimeout(() => {
+                    console.log("Baii~!!".red);
+                    process.exit();
+                }, 3000);
+            } else {
+                console.log("\n[ ! ] | System running successfully!\n".green);
+                console.log(`STREAMING STATUS v${info.version}  ║ Build: ${info.build}`.magenta);
+            }
         } else {
-            console.log(`[-] No tokens found in .env file`.red);
+            console.log("\nNo tokens found in .env file".red);
+            process.exit(1);
         }
 
-        console.log(" ↑ ".white);
-        console.log(`[+] DEOBF BY 4levy : ${work.size}/${envTokens.length}`.magenta);
-
-        if (!work.size) {
-            console.log("");
-            console.log("[-] CLOSING. . . ".red);
-            setTimeout(() => process.exit(), 3000);
-        }
     } catch (error) {
-        console.error(`[-] Fatal error: ${error.message}`.red);
+        console.error(`\nFatal Error: ${error.message}`.red);
         process.exit(1);
-    }
-})()
+    }   
+})();
