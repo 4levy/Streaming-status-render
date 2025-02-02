@@ -14,7 +14,7 @@ const startServer = () => {
     const startTime = Date.now();
 
     app.get('/', (req, res) => {
-        res.sendFile(__dirname + '/index.html');
+        res.sendFile(__dirname + '/Webpage/index.html');
     });
 
     app.get('/api/starttime', (req, res) => {
@@ -82,6 +82,19 @@ class GetImage {
 class Weather {
     constructor(location) {
         this.location = location;
+        this.feelslike_c = 0;
+        this.feelslike_f = 0;
+        this.windchill_c = 0;
+        this.windchill_f = 0;
+        this.heatindex_c = 0;
+        this.heatindex_f = 0;
+        this.dewpoint_c = 0;
+        this.dewpoint_f = 0;
+        this.co = 0;
+        this.no2 = 0;
+        this.o3 = 0;
+        this.so2 = 0;
+        this.pm10 = 0;
         this.stop = 0;
         schedule("*/5 * * * *", () => this.update());
     }
@@ -118,6 +131,19 @@ class Weather {
             this.cloud = data.current.cloud;
             this.uv = data.current.uv;
             this.pm2_5 = data.current.air_quality.pm2_5;
+            this.feelslike_c = data.current.feelslike_c;
+            this.feelslike_f = data.current.feelslike_f;
+            this.windchill_c = data.current.windchill_c;
+            this.windchill_f = data.current.windchill_f;
+            this.heatindex_c = data.current.heatindex_c;
+            this.heatindex_f = data.current.heatindex_f;
+            this.dewpoint_c = data.current.dewpoint_c;
+            this.dewpoint_f = data.current.dewpoint_f;
+            this.co = data.current.air_quality.co;
+            this.no2 = data.current.air_quality.no2;
+            this.o3 = data.current.air_quality.o3;
+            this.so2 = data.current.air_quality.so2;
+            this.pm10 = data.current.air_quality.pm10;
         } catch {
             if (this.stop > 10) {
                 return;
@@ -507,21 +533,38 @@ class ModClient extends Client {
 
     SPT(text) {
         if (!text) return text || null;
-
+    
         const { weather, sys, emoji, textFont, lib } = this;
-        const currentMoment = moment().locale('en').tz(weather.timezone);
-
+        const currentMoment = moment().locale('th').tz(weather.timezone);
+    
         const variables = {
+            // Time
             'hour:1': currentMoment.format('HH'),
             'hour:2': currentMoment.format('hh'),
             'min:1': currentMoment.format('mm'),
             'min:2': currentMoment.format('mm A'),
-            'th=date': currentMoment.format('DD'),
-            'th=month:1': currentMoment.format('MM'),
-            'th=year:2': currentMoment.format('YY'),
-            'en:date': currentMoment.format('dddd'),
-            'en=month:1': currentMoment.format('MMMM'),
-            'en=year:2': currentMoment.format('YYYY'),
+    
+            // Thai Date
+            'th=date': currentMoment.format('D'),
+            'th=week:1': currentMoment.format('ddd'),
+            'th=week:2': currentMoment.format('dddd'),
+            'th=month:1': currentMoment.format('M'),
+            'th=month:2': currentMoment.format('MMM'),
+            'th=month:3': currentMoment.format('MMMM'),
+            'th=year:1': (parseInt(currentMoment.format('YYYY')) + 543).toString().slice(-2),
+            'th=year:2': (parseInt(currentMoment.format('YYYY')) + 543).toString(),
+    
+            // English Date
+            'en=date': currentMoment.locale('en').format('Do'),
+            'en=week:1': currentMoment.locale('en').format('ddd'),
+            'en=week:2': currentMoment.locale('en').format('dddd'),
+            'en=month:1': currentMoment.locale('en').format('M'),
+            'en=month:2': currentMoment.locale('en').format('MMM'),
+            'en=month:3': currentMoment.locale('en').format('MMMM'),
+            'en=year:1': currentMoment.locale('en').format('YY'),
+            'en=year:2': currentMoment.locale('en').format('YYYY'),
+    
+            // Weather
             'city': weather.city,
             'region': weather.region,
             'country': weather.country,
@@ -537,12 +580,27 @@ class ModClient extends Client {
             'precip:in': weather.precip_in,
             'gust:kph': weather.gust_kph,
             'gust:mph': weather.gust_mph,
+            'feelslike:c': weather.feelslike_c,
+            'feelslike:f': weather.feelslike_f,
+            'windchill:c': weather.windchill_c,
+            'windchill:f': weather.windchill_f,
+            'heatindex:c': weather.heatindex_c,
+            'heatindex:f': weather.heatindex_f,
+            'dewpoint:c': weather.dewpoint_c,
+            'dewpoint:f': weather.dewpoint_f,
             'vis:km': weather.vis_km,
-            'vis:mi': weather.vis_mi,
+            'vis:mi': weather.vis_miles,
             'humidity': weather.humidity,
             'cloud': weather.cloud,
             'uv': weather.uv,
+            'co': weather.co,
+            'no2': weather.no2,
+            'o3': weather.o3,
+            'so2': weather.so2,
             'pm2.5': weather.pm2_5,
+            'pm10': weather.pm10,
+    
+            // System
             'ping': Math.round(this.ws.ping),
             'patch': lib.v.patch,
             'cpu:name': sys.cpuname,
@@ -554,13 +612,23 @@ class ModClient extends Client {
             'uptime:hours': Math.trunc(this.uptime / 3600000 % 24),
             'uptime:minutes': Math.trunc(this.uptime / 60000 % 60),
             'uptime:seconds': Math.trunc(this.uptime / 1000 % 60),
-            'count++': lib.count,
+    
+            // User
             'user:name': this.user?.username,
             'user:icon': this.user?.displayAvatarURL(),
             'user:banner': this.user?.bannerURL(),
-            'emoji:random': emoji.random(),
+            'guild=members': (guildId) => this.guilds.cache.get(guildId)?.memberCount,
+            'guild=name': (guildId) => this.guilds.cache.get(guildId)?.name,
+            'guild=icon': (guildId) => this.guilds.cache.get(guildId)?.iconURL(),
+    
+            'emoji:random': () => emoji.random(),
             'emoji:time': emoji.getTime(currentMoment.format('HH')),
-            'emoji:clock': emoji.getClock(currentMoment.format('HH'))
+            'emoji:clock': () => emoji.getClock(currentMoment.format('HH')),
+    
+            'random': (text) => {
+                const options = text.split(',').map(t => t.trim());
+                return options[Math.floor(Math.random() * options.length)];
+            }
         };
 
         const processFont = (fontNum, content) => {
